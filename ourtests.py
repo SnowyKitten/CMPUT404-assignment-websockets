@@ -40,7 +40,7 @@ import json
 
 world = dict()
 # set this to something sane 
-calls = 500
+calls = 10
 
 class WorldClient(WebSocketClient):
     def opened(self):
@@ -77,6 +77,7 @@ class WorldClient(WebSocketClient):
         while self.count < calls:
             m = self.receive()
             print "Incoming RECV %s %s " % (self.name,m)
+            print self.count
             if m is not None:
                 self.receive_my_message( m )
             else:

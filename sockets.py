@@ -17,6 +17,8 @@ import flask
 from flask import Flask, request
 from flask_sockets import Sockets
 import gevent
+from gevent import monkey
+monkey.patch_all()
 from gevent import queue
 import time
 import json
@@ -52,6 +54,11 @@ class World:
 
     def clear(self):
         self.space = dict()
+        self.ws_list = list()
+
+    def get_ws(self):
+        return self.ws_list
+
 
     def get(self, entity):
         return self.space.get(entity,dict())
@@ -61,26 +68,83 @@ class World:
 
 myWorld = World()        
 
-def set_listener( entity, data ):
+def set_listener( entity, data):
     ''' do something with the update ! '''
+    for ws in myWorld.get_ws():
+        packet = {entity: data}
+        ws.send(json.dumps(packet))
 
-myWorld.add_set_listener( set_listener )
+
+
+#myWorld.add_set_listener( set_listener )
         
 @app.route('/')
 def hello():
-    '''Return something coherent here.. perhaps redirect to /static/index.html '''
+    return flask.send_from_directory("static", "index.html")
+
+
+
+
+
+def read_ws(ws, client):
+    '''A greenlet function that reads from the websocket and updates the world'''
+    while not ws.closed:
+        try:
+            message = json.loads(ws.receive())
+            for e_key in myWorld.world():
+                packet_data = {"x": myWorld.world()[e_key]["x"],
+                               "y": myWorld.world()[e_key]["y"],
+                }
+                packet = {e_key: packet_data}
+                ws.send(json.dumps(packet))
+
+
+            for key in message:
+                entity_id = key
+                data = message[key]
+
+            myWorld.update(entity_id, 'x', data['x'])
+            myWorld.update(entity_id, 'y', data['y'])
+            try:
+                myWorld.update(entity_id, 'colour', data['colour'])
+                set_listener(entity_id, {"x": data["x"], "y": data["y"], "colour":data["colour"]})
+            except :
+                set_listener(entity_id, {"x": data["x"], "y": data["y"]})
+
+        except Exception,e:
+
+            '''
+            print e
+            if ws not in ws_list:
+                ws_list.append(ws)
+                for e_key in myWorld.world():
+                    packet_data = {"x": myWorld.world()[e_key]["x"],
+                                    "y": myWorld.world()[e_key]["y"],
+                    }
+                    packet = {e_key: packet_data}
+                    ws.send(json.dumps(packet))'''
+
+
+    #print str(client) + "has died"
+    print myWorld.get_ws()
     return None
 
-def read_ws(ws,client):
-    '''A greenlet function that reads from the websocket and updates the world'''
-    # XXX: TODO IMPLEMENT ME
-    return None
+
+
+threads = []
+#ws_list = []
 
 @sockets.route('/subscribe')
 def subscribe_socket(ws):
     '''Fufill the websocket URL of /subscribe, every update notify the
        websocket and read updates from the websocket '''
     # XXX: TODO IMPLEMENT ME
+
+
+    threads.append(gevent.spawn(read_ws, ws, len(threads)+1 ))
+    myWorld.get_ws().append(ws)
+    gevent.joinall(threads)
+
     return None
 
 
@@ -94,15 +158,24 @@ def flask_post_json():
     else:
         return json.loads(request.form.keys()[0])
 
+
+
+#----------------------------------------------------
+
 @app.route("/entity/<entity>", methods=['POST','PUT'])
 def update(entity):
     '''update the entities via this interface'''
     return None
 
+
+#-------------------------------------------------------
+
+
+
 @app.route("/world", methods=['POST','GET'])    
 def world():
     '''you should probably return the world here'''
-    return None
+    return json.dumps(myWorld.world())
 
 @app.route("/entity/<entity>")    
 def get_entity(entity):
@@ -112,8 +185,8 @@ def get_entity(entity):
 
 @app.route("/clear", methods=['POST','GET'])
 def clear():
-    '''Clear the world out!'''
-    return None
+    myWorld.clear()
+    return "SUCCESS", 200
 
 
 
