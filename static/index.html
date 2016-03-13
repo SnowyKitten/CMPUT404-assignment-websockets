@@ -6,7 +6,7 @@
     <meta content='width=device-width; height=device-height; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;' name='viewport' />
     <meta name="viewport" content="width=device-width" />
     <meta name="license" content="
-        Copyright 2013 Google, Abram Hindle
+        Copyright 2016 Google, Abram Hindle, Randy Wong, Marcin Pietrasik
         
         Licensed under the Apache License, Version 2.0 (the "License");
         you may not use this file except in compliance with the License.
@@ -124,7 +124,7 @@ function getPosition(e) {
 function addEntity(entity, data) {
     world[entity] = data;
     drawNextFrame(); // (but should we?)
-    packet = {};
+    var packet = {};
     packet[entity] = data;
     socket.send(JSON.stringify(packet));
 }
@@ -255,18 +255,39 @@ function wsSetup() {
     var url = "ws://"+host+"/subscribe";   
     socket = new WebSocket(url);
     socket.onopen = function() {
-        socket.send(JSON.stringify("Start"))
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', 'http://'+host+'/world');
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState==4) {
+                try {
+                    if (xhr.status==200) {
+                       world = JSON.parse(xhr.response);
+                       console.log(world)
+                       renderFrame();
+                    }
+                } 
+                catch(e) {
+                    alert('Error: ' + e.name);
+                }
+            }
+        };
+        xhr.setRequestHeader("Accept", "application/json");
+        xhr.send(null);
+
     };
     socket.onerror = function(msg) {
         debug("WebSocket Error:" + msg.data);
     };
     socket.onmessage = function(msg) {  
         try {
-            entity = JSON.parse(msg.data);
+
+            var entity = JSON.parse(msg.data);
             entity_id = Object.keys(entity)[0];
-            data = entity[entity_id];
-            world[entity_id] = data;
-            renderFrame();
+            if (world[entity_id] != entity[entity_id]) {
+                world[entity_id] = entity[entity_id];
+                renderFrame();
+            }
+
         } catch (e) {
             alert("socket on message: " + e);
         }
