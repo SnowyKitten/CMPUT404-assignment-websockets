@@ -24,7 +24,7 @@
   </head> 
   <body bgcolor="white" height="100%" width="100%"> 
     <div id="debug"></div>
-    <canvas id="c" width="100%" height="100%" style="-webkit-tap-highlight-color: transparent;"></canvas> 
+    <canvas id="c" width="100%" height="100%" style="-webkit-tap-highlight-color: transparent;)"></canvas> 
 
     <script>
       // Fix me
@@ -47,14 +47,18 @@ world = {};
 //XXX: TODO Make this prettier!
 function drawCircle(context,entity) {
     with(context) {
-        beginPath();                
+        beginPath();  
+       
+              
         lineWidth = 3;
         var x = entity["x"];
         var y = entity["y"];
         //moveTo(x,y);
         fillStyle = entity["colour"];
         strokeStyle = fillStyle;
-        arc(x, y, (entity["radius"])?entity["radius"]:50, 0, 2.0 * Math.PI, false);  
+        arc(x, y, (entity["radius"])?entity["radius"]:50, 0, 2.0 * Math.PI, false); 
+        context.fillStyle = entity["colour"];
+        fill();
         stroke();                                
     }
 }
@@ -72,7 +76,9 @@ function prepEntity(entity) {
 function clearFrame() {
     with(context) {
 	moveTo(0,0);
-	fillStyle = "#000";
+    //take from user DanS at http://stackoverflow.com/questions/5092808/how-do-i-randomly-generate-html-hex-color-codes-using-javascript
+    var col = '#'+(Math.random()*0xFFFFFF<<0).toString(16);
+	fillStyle = col;
 	fillRect(0,0,W,H);
     }
 
@@ -233,16 +239,19 @@ mouse = (function() {
 // Add the application specific mouse listeners!
 //XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'blue'});
+    var col = '#'+(Math.random()*0xFFFFFF<<0).toString(16);
+    addEntityWithoutName({'x':x,'y':y,'colour':col,'radius':5});
 });
 
 mouse.mouseuppers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'red'});
+    var col = '#'+(Math.random()*0xFFFFFF<<0).toString(16);
+    addEntityWithoutName({'x':x,'y':y,'colour': col,'radius':5});
 });
 
 mouse.mousedraggers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'green',
-                          'radius':10});
+    var col = '#'+(Math.random()*0xFFFFFF<<0).toString(16);
+    addEntityWithoutName({'x':x,'y':y,'colour': col,
+                          'radius':5});
 });
 
 
